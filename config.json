@@ -1,0 +1,30 @@
+{
+  "system": {
+    "device_id": "CYCLE_SENTINEL_001",
+    "version": "1.0.0",
+    "debug_mode": true
+  },
+  "ble": {
+    "service_uuid": "12345678-1234-1234-1234-123456789abc",
+    "characteristics": {
+      "auth": "12345678-1234-1234-1234-123456789abd",
+      "map_data": "12345678-1234-1234-1234-123456789abe", 
+      "status": "12345678-1234-1234-1234-123456789abf"
+    },
+    "connection_timeout": 30,
+    "chunk_size": 64,
+    "max_transfer_size": 1048576
+  },
+  "security": {
+    "auth_timeout": 30,
+    "max_auth_attempts": 3,
+    "min_map_version": 1,
+    "required_signature": true
+  },
+  "storage": {
+    "maps_dir": "./maps",
+    "active_map": "./maps/active/current_map.json",
+    "backup_map": "./maps/backup/backup_map.json",
+    "logs_dir": "./logs"
+  }
+}

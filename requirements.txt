@@ -1,0 +1,18 @@
+# BLE Communication
+bleak>=0.21.1
+
+# Cryptography
+cryptography>=41.0.0
+
+# JSON validation  
+jsonschema>=4.19.0
+
+# Async support
+asyncio-mqtt>=0.13.0
+
+# Development tools
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Optional - for Pi GPIO
+# RPi.GPIO>=0.7.1  # Uncomment if using Pi GPIO
