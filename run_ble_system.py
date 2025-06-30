@@ -349,7 +349,7 @@ def create_demo_map(output_path: Path, size_category: str = "medium") -> Path:
 
 async def run_demo(config_path: Path, verbose: bool = False):
     """Run complete demo scenario"""
-    
+    from pathlib import Path
     print("🎬 Running BLE System Demo")
     print("=" * 40)
     

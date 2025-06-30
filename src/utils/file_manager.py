@@ -96,7 +96,7 @@ class FileManager:
         Returns:
             bool: Success status
         """
-        
+        temp_path = None
         try:
             # Create temporary file in same directory for atomic move
             temp_path = target_path.with_suffix('.tmp')
@@ -181,7 +181,8 @@ class FileManager:
                 
                 return backup_path
             else:
-                backup_path.unlink()  # Remove failed backup
+                if backup_path.exists():
+                    backup_path.unlink()  # Remove failed backup
                 raise ValueError("Backup verification failed")
             
         except Exception as e:
