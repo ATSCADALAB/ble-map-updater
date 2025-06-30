@@ -4,3 +4,15 @@
 2025-06-27 11:56:41,583 | INFO | BLE Map Server initialized
 2025-06-30 09:09:08,102 | INFO | MapTransferManager initialized
 2025-06-30 09:09:08,103 | INFO | BLE Map Server initialized
+{"timestamp": "2025-06-30T17:05:32.211429", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
+{"timestamp": "2025-06-30T17:05:32.212759", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
+{"timestamp": "2025-06-30T17:05:32.213762", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
+{"timestamp": "2025-06-30T17:05:52.291580", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
+{"timestamp": "2025-06-30T17:05:52.291580", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
+{"timestamp": "2025-06-30T17:05:52.292581", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
+{"timestamp": "2025-06-30T17:07:42.825482", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
+{"timestamp": "2025-06-30T17:07:42.826482", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
+{"timestamp": "2025-06-30T17:07:42.826482", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
+{"timestamp": "2025-06-30T17:08:05.135554", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
+{"timestamp": "2025-06-30T17:08:05.136552", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
+{"timestamp": "2025-06-30T17:08:05.137558", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
