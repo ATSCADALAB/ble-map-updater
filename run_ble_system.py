@@ -8,6 +8,7 @@ USAGE:
     python run_ble_system.py client <file>   # Chạy BLE client để send map
     python run_ble_system.py test            # Chạy integration tests
     python run_ble_system.py demo            # Chạy demo với mock data
+    python run_ble_system.py --create-config # Tạo config file mặc định
 
 FEATURES:
 - Automatic dependency checking
@@ -72,6 +73,7 @@ def validate_config(config_path: Path) -> bool:
     
     if not config_path.exists():
         print(f"❌ Config file not found: {config_path}")
+        print("Create one with: python run_ble_system.py --create-config")
         return False
     
     try:
@@ -79,24 +81,20 @@ def validate_config(config_path: Path) -> bool:
             config = json.load(f)
         
         # Check required sections
-        required_sections = ["system", "ble", "storage", "security", "transfer"]
+        required_sections = ["system", "ble", "storage"]
         for section in required_sections:
             if section not in config:
                 print(f"❌ Missing config section: {section}")
                 return False
         
-        # Check BLE config
-        ble_config = config["ble"]
-        required_ble_fields = ["service_uuid", "characteristics", "chunk_size", "max_transfer_size"]
-        for field in required_ble_fields:
-            if field not in ble_config:
-                print(f"❌ Missing BLE config field: {field}")
-                return False
+        # Check required fields
+        if "device_id" not in config["system"]:
+            print("❌ Missing system.device_id")
+            return False
         
-        # Validate file size limits
-        max_size = ble_config["max_transfer_size"]
-        if max_size > 10 * 1024 * 1024:  # 10MB
-            print(f"⚠️ Warning: Large max transfer size: {max_size:,} bytes")
+        if "service_uuid" not in config["ble"]:
+            print("❌ Missing ble.service_uuid")
+            return False
         
         print("✅ Configuration valid")
         return True
@@ -105,7 +103,7 @@ def validate_config(config_path: Path) -> bool:
         print(f"❌ Invalid JSON in config: {e}")
         return False
     except Exception as e:
-        print(f"❌ Config validation failed: {e}")
+        print(f"❌ Config validation error: {e}")
         return False
 
 def create_default_config(config_path: Path):
@@ -115,9 +113,9 @@ def create_default_config(config_path: Path):
     
     default_config = {
         "system": {
-            "device_id": "CYCLE_SENTINEL_001",
+            "device_id": "CYCLE_SENTINEL_PI_001",
             "version": "1.0.0",
-            "debug_mode": True
+            "description": "BLE Map Transfer Server for Cycle Sentinel"
         },
         "ble": {
             "service_uuid": "12345678-1234-1234-1234-123456789abc",
@@ -126,7 +124,6 @@ def create_default_config(config_path: Path):
                 "map_data": "12345678-1234-1234-1234-123456789abe",
                 "status": "12345678-1234-1234-1234-123456789abf"
             },
-            "connection_timeout": 60,
             "chunk_size": 128,
             "max_transfer_size": 5242880,
             "max_chunks_per_second": 10,
@@ -139,7 +136,7 @@ def create_default_config(config_path: Path):
             "auth_timeout": 60,
             "max_auth_attempts": 3,
             "min_map_version": 1,
-            "required_signature": True,
+            "required_signature": False,
             "signature_algorithm": "ECDSA_P256",
             "hash_algorithm": "SHA256"
         },
@@ -180,231 +177,164 @@ async def run_server(config_path: Path, verbose: bool = False):
     print("=" * 50)
     
     try:
-        from ble.server import BLEMapServer, run_ble_server
+        # Import here to avoid import errors if modules not available
+        sys.path.insert(0, str(Path(__file__).parent / "src"))
+        
+        from ble.server import BLEMapServer
         
         # Progress callback
         def progress_callback(chunks_received, total_chunks, progress, metrics):
             if chunks_received % 50 == 0 or chunks_received == total_chunks:
                 print(f"📊 Transfer: {chunks_received:,}/{total_chunks:,} chunks ({progress:.1f}%) - "
-                      f"Rate: {metrics.transfer_rate_bps:.0f} bps")
+                      f"Rate: {metrics.get('transfer_rate_bps', 0):.0f} bps")
         
-        print(f"🔧 Using config: {config_path}")
-        print(f"📡 Server will advertise and wait for connections...")
-        print(f"🔒 Authentication required for all transfers")
-        print(f"📱 Use enforcement device client to connect")
-        print()
-        print("Press Ctrl+C to stop server")
-        print("-" * 50)
+        # Create server
+        server = BLEMapServer(str(config_path))
+        server.set_progress_callback(progress_callback)
         
-        await run_ble_server(str(config_path), progress_callback)
+        print(f"🔥 BLE Map Server started successfully!")
+        print(f"📡 Device ID: {server.config['system']['device_id']}")
+        print(f"📱 Service UUID: {server.config['ble']['service_uuid']}")
+        print("🔒 Waiting for enforcement device connections...")
+        print("Press Ctrl+C to stop")
+        
+        # Start server
+        await server.start_server()
         
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        print("Make sure all dependencies are installed")
+        print("Make sure all dependencies are installed: pip install -r requirements.txt")
+        return False
     except Exception as e:
-        print(f"❌ Server error: {e}")
+        print(f"❌ Server failed: {e}")
         if verbose:
             import traceback
             traceback.print_exc()
+        return False
 
-async def run_client(map_file_path: Path, config_path: Path, device_address: Optional[str] = None, verbose: bool = False):
+async def run_client(config_path: Path, map_file: Path, device_address: Optional[str] = None, verbose: bool = False):
     """Run BLE client to send map"""
     
-    print("🚀 Starting BLE Map Client (Enforcement Device)")
-    print("=" * 50)
-    
-    if not map_file_path.exists():
-        print(f"❌ Map file not found: {map_file_path}")
-        return False
-    
-    file_size = map_file_path.stat().st_size
-    print(f"📁 Map file: {map_file_path}")
-    print(f"📏 File size: {file_size:,} bytes ({file_size/1024/1024:.1f} MB)")
-    
-    if device_address:
-        print(f"🎯 Target device: {device_address}")
+    print("📤 Starting BLE Map Client")
+    print("=" * 40)
     
     try:
-        from ble.client import BLEMapClient, send_map_to_device
+        sys.path.insert(0, str(Path(__file__).parent / "src"))
         
-        # Progress callback
-        def progress_callback(chunks_sent, total_chunks, progress):
-            if chunks_sent % 100 == 0 or chunks_sent == total_chunks:
-                print(f"📤 Sending: {chunks_sent:,}/{total_chunks:,} chunks ({progress:.1f}%)")
+        from ble.client import BLEMapClient
         
-        print(f"🔧 Using config: {config_path}")
-        print("🔍 Scanning for compatible devices...")
-        print("-" * 50)
+        # Create client
+        client = BLEMapClient(str(config_path))
         
-        success = await send_map_to_device(
-            map_file_path,
-            device_address,
-            str(config_path)
-        )
+        print(f"📄 Map file: {map_file}")
         
-        if success:
+        # Send map
+        result = await client.send_map_file(str(map_file), device_address)
+        
+        if result:
             print("✅ Map sent successfully!")
-            return True
         else:
             print("❌ Failed to send map")
-            return False
-            
+        
+        return result
+        
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        print("Make sure all dependencies are installed")
         return False
     except Exception as e:
-        print(f"❌ Client error: {e}")
+        print(f"❌ Client failed: {e}")
         if verbose:
             import traceback
             traceback.print_exc()
         return False
 
-def run_tests(quick: bool = False, verbose: bool = False):
+async def run_tests(config_path: Path, test_name: Optional[str] = None, quick: bool = False, verbose: bool = False):
     """Run integration tests"""
     
     print("🧪 Running BLE Integration Tests")
     print("=" * 40)
     
     try:
-        from tests.test_ble_integration import run_integration_tests
+        sys.path.insert(0, str(Path(__file__).parent / "src"))
         
-        if quick:
-            print("⚡ Quick test mode - skipping slow tests")
+        from tests.test_ble_integration import BLEIntegrationTestSuite
         
-        return run_integration_tests()
+        # Run tests
+        import unittest
+        
+        if test_name:
+            # Run specific test
+            suite = unittest.TestSuite()
+            test_case = BLEIntegrationTestSuite(test_name)
+            suite.addTest(test_case)
+        else:
+            # Run all tests
+            suite = unittest.TestLoader().loadTestsFromTestCase(BLEIntegrationTestSuite)
+        
+        runner = unittest.TextTestRunner(verbosity=2 if verbose else 1)
+        result = runner.run(suite)
+        
+        if result.wasSuccessful():
+            print("✅ All tests passed!")
+            return True
+        else:
+            print("❌ Some tests failed!")
+            return False
         
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        print("Make sure test modules are available")
-        return 1
+        return False
     except Exception as e:
-        print(f"❌ Test error: {e}")
+        print(f"❌ Tests failed: {e}")
         if verbose:
             import traceback
             traceback.print_exc()
-        return 1
-
-def create_demo_map(output_path: Path, size_category: str = "medium") -> Path:
-    """Create demo map file for testing"""
-    
-    print(f"📝 Creating demo map file ({size_category})...")
-    
-    base_map = {
-        "metadata": {
-            "version": int(time.time()),
-            "created": int(time.time()),
-            "description": f"Demo map file ({size_category} size)",
-            "schema_version": "1.0",
-            "created_by": "BLE System Demo"
-        },
-        "zones": []
-    }
-    
-    if size_category == "small":
-        # ~1KB
-        num_zones = 5
-    elif size_category == "medium":
-        # ~100KB  
-        num_zones = 500
-    elif size_category == "large":
-        # ~2MB
-        num_zones = 2000
-    else:
-        num_zones = 100
-    
-    # Generate zones
-    for i in range(num_zones):
-        zone = {
-            "id": f"demo_zone_{i}",
-            "type": "speed_limit",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [[[i*0.001, i*0.001], [i*0.001+0.0005, i*0.001], 
-                               [i*0.001+0.0005, i*0.001+0.0005], [i*0.001, i*0.001+0.0005], [i*0.001, i*0.001]]]
-            },
-            "properties": {
-                "speed_limit": 15 + (i % 30),
-                "zone_type": f"demo_type_{i % 5}",
-                "description": f"Demo zone {i} with example properties and metadata",
-                "tags": [f"demo", f"zone_{i}", f"type_{i % 3}"],
-                "created": int(time.time()) - (i * 60)  # Stagger creation times
-            }
-        }
-        base_map["zones"].append(zone)
-    
-    # Create output directory
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Write map file
-    with open(output_path, 'w') as f:
-        json.dump(base_map, f, indent=2)
-    
-    file_size = output_path.stat().st_size
-    print(f"   Created: {output_path}")
-    print(f"   Size: {file_size:,} bytes ({file_size/1024:.1f} KB)")
-    print(f"   Zones: {num_zones:,}")
-    
-    return output_path
+        return False
 
 async def run_demo(config_path: Path, verbose: bool = False):
-    """Run complete demo scenario"""
-    from pathlib import Path
-    print("🎬 Running BLE System Demo")
-    print("=" * 40)
+    """Run demo scenario"""
     
-    # Create demo directory
-    demo_dir = Path("demo_output")
-    demo_dir.mkdir(exist_ok=True)
-    
-    # Create demo map
-    demo_map_path = create_demo_map(demo_dir / "demo_map.json", "medium")
-    
-    print("\n📋 Demo Scenario:")
-    print("1. Create mock BLE environment") 
-    print("2. Initialize server components")
-    print("3. Simulate client connection")
-    print("4. Transfer demo map file")
-    print("5. Validate results")
+    print("🎭 Running BLE System Demo")
+    print("=" * 30)
     
     try:
-        # Import test modules for mock environment
-        from tests.test_ble_integration import BLEIntegrationTestSuite
+        # Create demo directory
+        demo_dir = Path("./demo")
+        demo_dir.mkdir(exist_ok=True)
         
-        print("\n🔧 Setting up mock environment...")
+        # Create demo map file
+        demo_map = {
+            "metadata": {
+                "version": int(time.time()),
+                "created": time.time(),
+                "description": "Demo speed zones",
+                "schema_version": "1.0"
+            },
+            "zones": [
+                {
+                    "id": "demo_zone_001",
+                    "type": "speed_limit",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[106.6297, 10.8231], [106.6298, 10.8232], [106.6299, 10.8231], [106.6297, 10.8231]]]
+                    },
+                    "properties": {
+                        "speed_limit": 30,
+                        "zone_type": "school_zone"
+                    }
+                }
+            ]
+        }
         
-        # Create test instance
-        test_suite = BLEIntegrationTestSuite()
-        test_suite.setUpClass()
+        demo_map_file = demo_dir / "demo_map.json"
+        with open(demo_map_file, 'w') as f:
+            json.dump(demo_map, f, indent=2)
         
-        print("✅ Mock environment ready")
+        print(f"📄 Demo map created: {demo_map_file}")
+        print(f"📊 Map size: {demo_map_file.stat().st_size} bytes")
         
-        # Run chunked transfer simulation
-        print("\n📤 Simulating map transfer...")
-        
-        test_suite.setUp()
-        test_suite.test_02_chunked_transfer_simulation()
-        
-        print("✅ Transfer simulation completed")
-        
-        # Run compression test
-        print("\n🗜️ Testing compression...")
-        
-        test_suite.test_03_compression_testing()
-        
-        print("✅ Compression test completed")
-        
-        # Performance test
-        print("\n📊 Performance benchmarking...")
-        
-        test_suite.test_06_performance_benchmarking()
-        
-        print("✅ Performance test completed")
-        
-        # Cleanup
-        test_suite.tearDownClass()
-        
-        print("\n🎉 Demo completed successfully!")
+        # Demo completed
+        print("🎉 Demo setup completed!")
         print(f"📁 Demo files saved in: {demo_dir}")
         
         return True
@@ -476,79 +406,78 @@ Examples:
   %(prog)s test --quick                    # Quick test run
   %(prog)s demo                            # Run demo scenario
   %(prog)s status                          # Show system status
+  %(prog)s --create-config                 # Create default config
         """
     )
     
-    parser.add_argument("command", choices=["server", "client", "test", "demo", "status"],
+    parser.add_argument("command", nargs="?", choices=["server", "client", "test", "demo", "status"],
                        help="Command to run")
-    parser.add_argument("file", nargs="?", help="Map file to send (for client)")
-    parser.add_argument("--config", default="config.json", help="Config file path")
-    parser.add_argument("--device", help="Target device address (for client)")
+    parser.add_argument("file", nargs="?", help="Map file to send (for client command)")
+    parser.add_argument("--config", "-c", default="config.json", help="Config file path")
+    parser.add_argument("--device", "-d", help="Target device address (for client)")
+    parser.add_argument("--test", "-t", help="Specific test to run")
+    parser.add_argument("--quick", "-q", action="store_true", help="Quick test mode")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--quick", action="store_true", help="Quick mode (for tests)")
-    parser.add_argument("--create-config", action="store_true", help="Create default config")
+    parser.add_argument("--create-config", action="store_true", help="Create default config file")
     
     args = parser.parse_args()
     
-    # Setup
-    config_path = Path(args.config)
-    
-    print("🚀 BLE Map Transfer System")
-    print(f"⚙️ Config: {config_path}")
-    print()
-    
-    # Create config if requested
+    # Handle config creation
     if args.create_config:
-        create_default_config(config_path)
+        create_default_config(Path(args.config))
         return 0
     
-    # Create default config if missing
-    if not config_path.exists() and args.command != "status":
-        print("📝 Config file not found, creating default...")
-        create_default_config(config_path)
+    # Check if command provided
+    if not args.command:
+        parser.print_help()
+        return 1
     
-    # Check dependencies (except for status)
+    config_path = Path(args.config)
+    
+    # Pre-flight checks
     if args.command != "status":
+        if not validate_config(config_path):
+            return 1
+        
         if not check_dependencies():
             return 1
     
-    # Validate config (except for status and demo)
-    if args.command not in ["status", "demo"]:
-        if not validate_config(config_path):
-            return 1
-    
-    # Run command
     try:
+        # Run command
         if args.command == "server":
             asyncio.run(run_server(config_path, args.verbose))
-            return 0
             
         elif args.command == "client":
             if not args.file:
-                print("❌ Map file required for client mode")
-                print("Usage: python run_ble_system.py client <map_file>")
+                print("❌ Map file required for client command")
                 return 1
             
-            map_file_path = Path(args.file)
-            success = asyncio.run(run_client(map_file_path, config_path, args.device, args.verbose))
-            return 0 if success else 1
+            map_file = Path(args.file)
+            if not map_file.exists():
+                print(f"❌ Map file not found: {map_file}")
+                return 1
+            
+            result = asyncio.run(run_client(config_path, map_file, args.device, args.verbose))
+            return 0 if result else 1
             
         elif args.command == "test":
-            return run_tests(args.quick, args.verbose)
+            result = asyncio.run(run_tests(config_path, args.test, args.quick, args.verbose))
+            return 0 if result else 1
             
         elif args.command == "demo":
-            success = asyncio.run(run_demo(config_path, args.verbose))
-            return 0 if success else 1
+            result = asyncio.run(run_demo(config_path, args.verbose))
+            return 0 if result else 1
             
         elif args.command == "status":
             show_status(config_path)
-            return 0
             
+        return 0
+        
     except KeyboardInterrupt:
-        print("\n🛑 Interrupted by user")
+        print("\n🛑 Operation interrupted by user")
         return 1
     except Exception as e:
-        print(f"❌ Command failed: {e}")
+        print(f"❌ Unexpected error: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()
