@@ -16,3 +16,13 @@
 {"timestamp": "2025-06-30T17:08:05.135554", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
 {"timestamp": "2025-06-30T17:08:05.136552", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
 {"timestamp": "2025-06-30T17:08:05.137558", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
+{"timestamp": "2025-07-01T10:31:02.868720", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
+{"timestamp": "2025-07-01T10:31:02.869792", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
+{"timestamp": "2025-07-01T10:31:02.870823", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
+{"timestamp": "2025-07-01T10:31:17.934120", "level": "ERROR", "logger": "ble_map_transfer.system", "message": "Transfer completion failed", "module": "map_transfer", "function": "complete_transfer", "line": 373}
+{"timestamp": "2025-07-01T10:31:17.934120", "level": "ERROR", "logger": "ble_map_transfer.system", "message": "Transfer completion failed", "module": "map_transfer", "function": "complete_transfer", "line": 373}
+{"timestamp": "2025-07-01T11:09:01.039893", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapUpdaterLogger initialized", "module": "logger", "function": "__init__", "line": 100}
+{"timestamp": "2025-07-01T11:09:01.039893", "level": "INFO", "logger": "ble_map_transfer.system", "message": "AuthenticationManager initialized", "module": "authentication", "function": "__init__", "line": 71}
+{"timestamp": "2025-07-01T11:09:01.039893", "level": "INFO", "logger": "ble_map_transfer.system", "message": "MapTransferManager initialized", "module": "map_transfer", "function": "__init__", "line": 95}
+{"timestamp": "2025-07-01T11:09:15.945945", "level": "ERROR", "logger": "ble_map_transfer.system", "message": "Transfer completion failed", "module": "map_transfer", "function": "complete_transfer", "line": 373}
+{"timestamp": "2025-07-01T11:09:15.945945", "level": "ERROR", "logger": "ble_map_transfer.system", "message": "Transfer completion failed", "module": "map_transfer", "function": "complete_transfer", "line": 373}

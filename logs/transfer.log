@@ -1,0 +1,2 @@
+{"timestamp": "2025-07-01T10:31:06.906770", "level": "INFO", "logger": "ble_map_transfer.transfer", "message": "Transfer initialized", "module": "map_transfer", "function": "start_transfer", "line": 171}
+{"timestamp": "2025-07-01T11:09:05.059906", "level": "INFO", "logger": "ble_map_transfer.transfer", "message": "Transfer initialized", "module": "map_transfer", "function": "start_transfer", "line": 171}
